@@ -17,12 +17,15 @@
      
 #define TRUE   1 
 #define FALSE  0 
-#define PORT 8888 
-     
-int main(int argc , char *argv[])  
+//#define PORT 8888 
+
+
+
+int main(int ac , char *av[])  
 {  
-    (void)argc;
-    (void)argv;
+    (void)ac;
+    //(void)argv;
+    int PORT = atoi(av[1]);
     int opt = TRUE; 
     // bool isExit = false;
     int master_socket , addrlen , new_socket , client_socket[30] , 
@@ -162,7 +165,7 @@ int main(int argc , char *argv[])
                 }  
             }  
         }  
-             
+        /////////////////////////////MSG CLIENT//////////////////////////////
         //else its some IO operation on some other socket
         int j = 0;
         int i = 0;
