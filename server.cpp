@@ -1,136 +1,10 @@
-
-//#include <iostream>
-//#include <string.h>
-//#include <sys/types.h>
-//#include <sys/socket.h>
-//#include <netinet/in.h>
-//#include <arpa/inet.h>
-//#include <stdlib.h>
-//#include <unistd.h>
-////#include <sys/time.h>
-//
-//using namespace std;
-//
-//int main()
-//{
-//    /* ---------- INITIALIZING VARIABLES ---------- */
-//
-//    int client, server;
-//    int portNum = 1500;
-//    bool isExit = false;
-//    int bufsize = 1024;
-//    char buffer[bufsize];
-//
-//    struct sockaddr_in server_addr;
-//    socklen_t size;
-//
-//    /* ---------- ESTABLISHING SOCKET CONNECTION ----------*/
-//    /* --------------- socket() function ------------------*/
-//
-//    client = socket(AF_INET, SOCK_STREAM, 0);
-//
-//    if (client < 0) 
-//    {
-//        cout << "\nError establishing socket..." << endl;
-//        exit(1);
-//    }
-//
-//    cout << "\n=> Socket server has been created..." << endl;
-//
-//    server_addr.sin_family = AF_INET;
-//    server_addr.sin_addr.s_addr = htons(INADDR_ANY);
-//    server_addr.sin_port = htons(portNum);
-//
-//    /* ---------- BINDING THE SOCKET ---------- */
-//    /* ---------------- bind() ---------------- */
-//
-//
-//    if ((bind(client, (struct sockaddr*)&server_addr,sizeof(server_addr))) < 0) 
-//    {
-//        cout << "=> Error binding connection, the socket has already been established..." << endl;
-//        return -1;
-//    }
-//
-//    size = sizeof(server_addr);
-//    cout << "=> Looking for clients..." << endl;
-//
-//    /* ------------- LISTENING CALL ------------- */
-//    /* ---------------- listen() ---------------- */
-//
-//    listen(client, 1);
-//
-//    /* ------------- ACCEPTING CLIENTS  ------------- */
-//    /* ----------------- listen() ------------------- */
-//
-//    int clientCount = 1;
-//    server = accept(client,(struct sockaddr *)&server_addr,&size);
-//
-//    // first check if it is valid or not
-//    if (server < 0) 
-//        cout << "=> Error on accepting..." << endl;
-//
-//    while (server > 0) 
-//    {
-//        strcpy(buffer, "=> Server connected...\n");
-//        send(server, buffer, bufsize, 0);
-//        cout << "=> Connected with the client #" << clientCount << ", you are good to go..." << endl;
-//        cout << "\n=> Enter # to end the connection\n" << endl;
-//
-//        cout << "Client: ";
-//        do {
-//            recv(server, buffer, bufsize, 0);
-//            cout << buffer << " ";
-//            if (*buffer == '#') {
-//                *buffer = '*';
-//                isExit = true;
-//            }
-//        } while (*buffer != '*');
-//
-//        do {
-//            cout << "\nServer: ";
-//            do {
-//                cin >> buffer;
-//                send(server, buffer, bufsize, 0);
-//                if (*buffer == '#') {
-//                    send(server, buffer, bufsize, 0);
-//                    *buffer = '*';
-//                    isExit = true;
-//                }
-//            } while (*buffer != '*');
-//
-//            cout << "Client: ";
-//            do {
-//                recv(server, buffer, bufsize, 0);
-//                cout << buffer << " ";
-//                if (*buffer == '#') {
-//                    *buffer = '*';
-//                    isExit = true;
-//                }
-//            } while (*buffer != '*');
-//        } while (!isExit);
-//
-//        /* ---------------- CLOSE CALL ------------- */
-//        /* ----------------- close() --------------- */
-//
-//        // inet_ntoa converts packet data to IP, which was taken from client
-//        cout << "\n\n=> Connection terminated with IP " << inet_ntoa(server_addr.sin_addr);
-//        close(server);
-//        cout << "\nGoodbye..." << endl;
-//        isExit = false;
-//        exit(1);
-//    }
-//
-//    close(client);
-//    return 0;
-//}
-
-
 #include <stdio.h>
 #include <iostream>
 #include <string.h>   //strlen 
 #include <stdlib.h> 
 #include <errno.h> 
 #include <unistd.h>   //close 
+#include <fcntl.h>
 
 #include <sys/types.h>
 #define _XOPEN_SOURCE_EXTENDED 1
@@ -150,13 +24,14 @@ int main(int argc , char *argv[])
     (void)argc;
     (void)argv;
     int opt = TRUE; 
-    bool isExit = false;
+    // bool isExit = false;
     int master_socket , addrlen , new_socket , client_socket[30] , 
           max_clients = 30 , activity, i , valread , sd;  
     int max_sd;  
     struct sockaddr_in address;  
     int bufsize = 1024;
     char buffer[1025];  //data buffer of 1K 
+    memset(buffer, 0, bufsize);
          
     //set of socket descriptors 
     fd_set readfds;  
@@ -254,10 +129,19 @@ int main(int argc , char *argv[])
                 perror("accept");  
                 exit(EXIT_FAILURE);  
             }  
+
+            // set non-blocking socket
+            if (fcntl(new_socket, F_SETFL, O_NONBLOCK) < 0) {
+                // handle error
+                std::cerr << "Cannot set state on socket" << std::endl;
+                exit(EXIT_FAILURE);
+            }
+
+
              //
             //inform user of socket number - used in send and receive commands 
             std::cout << "New connection , socket fd is " << new_socket << ", ip is : "<< inet_ntoa(address.sin_addr) << " , port : "<< ntohs(address.sin_port) << std::endl;
-           
+
             //send new connection greeting message 
             if( send(new_socket, message, strlen(message), 0) != (ssize_t)strlen(message))  
             {  
@@ -280,6 +164,9 @@ int main(int argc , char *argv[])
         }  
              
         //else its some IO operation on some other socket
+        int j = 0;
+        int i = 0;
+        int len = 0;
         for (i = 0; i < max_clients; i++)  
         {  
             sd = client_socket[i];  
@@ -304,131 +191,33 @@ int main(int argc , char *argv[])
                 {  
                     //set the string terminating NULL byte on the end 
                     //of the data read 
-                    buffer[valread] = '\0';
-                    while (sd > 0) 
-                    {
-                        strcpy(buffer, "=> sd connected...\n");
-                        send(sd, buffer, bufsize, 0);
-                        std::cout << "=> Connected with the client #" << i << ", you are good to go..." << std::endl;
-                        std::cout << "\n=> Enter # to end the connection\n" << std::endl;
-                        std::cout << "Client: ";
-                        do 
-                        {
-                            recv(sd, buffer, bufsize, 0);
-                            std::cout << buffer << " ";
-                            if (*buffer == '#') 
-                            {
-                                *buffer = '*';
-                                isExit = true;
-                            }
-                        }
-                        while (*buffer != '*');
-                        do 
-                        {
-                            std::cout << "Client: ";
-                            do 
-                            {
-                                std::cin >> buffer;
-                                send(sd, buffer, bufsize, 0);
-                                if (*buffer == '#')
-                                {
-                                    send(sd , buffer , bufsize , 0);
-                                    *buffer = '*';
-                                    isExit = true;
-                                }
-                            }
-                            while (*buffer != '*');
-
-                            std::cout << "Client: ";
-                            do 
-                            {
-                                recv(sd, buffer, bufsize, 0);
-                                std::cout << buffer << " ";
-                                if (*buffer == '#')
-                                {
-                                    *buffer = '*';
-                                    isExit = true;
-                                }
-                            } 
-                            while (*buffer != '*');
-                            /* ---------------- CLOSE CALL ------------- */
-                            /* ----------------- close() --------------- */
-                            // inet_ntoa converts packet data to IP, which was taken from client
-                            std::wcout << "\n\n=> Connection terminated with IP " << inet_ntoa(address.sin_addr);
-                            close(sd);
-                            std::wcout << "\nGoodbye..." << std::endl;
-                            isExit = false;
-                            exit(1);
-                        }
-                        while (sd);
-                            close(sd);
-                        return (0);
-                        //do 
-                        //{
-                        //    close(sd);
-                        //    return (0); 
-                        //}
+                    for (j = 0; j < max_clients; j++) 
+                    { 
+                           
+                        buffer[valread] = '\0';
                         
+                        while (valread > 0) 
+                        {
+                            std::cout << "1len: " << (len = strlen(buffer)) << std::endl;
+                            std::cout << "1buffer:" << buffer << std::endl;
+                            valread = recv(client_socket[j], buffer, bufsize, 0);
+                            for (i = 0; i < max_clients; i++) 
+                            {
+                                buffer[len] = '\0';
+                                std::cout << "2len: " << strlen(buffer) << std::endl;
+                                std::cout << "2buffer:" << buffer << std::endl;
+                                send(client_socket[i], buffer,bufsize, 0);
+                            }
+
+                        }                            
                     }
-                }  
-            }  
-        }  
+                }
+
+            }   
+
+        }   
+
     }  
          
     return 0;  
 } 
-
-//ligne 307
-//    while (sd > 0) 
-//    {
-//        strcpy(buffer, "=> sd connected...\n");
-//        send(sd, buffer, bufsize, 0);
-//        cout << "=> Connected with the client #" << clientCount << ", you are good to go..." << endl;
-//        cout << "\n=> Enter # to end the connection\n" << endl;
-//
-//        cout << "Client: ";
-//        do {
-//            recv(sd, buffer, bufsize, 0);
-//            cout << buffer << " ";
-//            if (*buffer == '#') {
-//                *buffer = '*';
-//                isExit = true;
-//            }
-//        } while (*buffer != '*');
-//
-//        do {
-//            cout << "\n sd: ";
-//            do {
-//                cin >> buffer;
-//                send(sd, buffer, bufsize, 0);
-//                if (*buffer == '#') {
-//                    send(sd, buffer, bufsize, 0);
-//                    *buffer = '*';
-//                    isExit = true;
-//                }
-//            } while (*buffer != '*');
-//
-//            cout << "Client: ";
-//            do {
-//                recv(sd, buffer, bufsize, 0);
-//                cout << buffer << " ";
-//                if (*buffer == '#') {
-//                    *buffer = '*';
-//                    isExit = true;
-//                }
-//            } while (*buffer != '*');
-//        } while (!isExit);
-//
-//        /* ---------------- CLOSE CALL ------------- */
-//        /* ----------------- close() --------------- */
-//
-//        // inet_ntoa converts packet data to IP, which was taken from client
-//        cout << "\n\n=> Connection terminated with IP " << inet_ntoa(sd_addr.sin_addr);
-//        close(sd);
-//        cout << "\nGoodbye..." << endl;
-//        isExit = false;
-//        exit(1);
-//    }
-//
-//    close(client);
-//    return 0;
