@@ -1,0 +1,6 @@
+FROM irssi:latest
+
+COPY irssi2.conf .irssi/config
+RUN echo "irssi2" > /home/user/irssi2.txt
+
+ENTRYPOINT [ "irssi" ]

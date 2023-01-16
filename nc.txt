@@ -1,0 +1,11 @@
+irssi (make client1/2)   | nc -C localhost 6697
+
+/connect local           | CAP LS 302
+                         | JOIN :
+                         | CAP END
+                         | NICK nicknc
+                         | USER usernc usernc localhost :nc1
+                         | MODE nicknc +i
+                         | PING localhost
+/join chan               | JOIN #chan
+hellloooo                | PRIVMSG #chan :Hello World!

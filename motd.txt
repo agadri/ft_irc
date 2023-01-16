@@ -1,0 +1,2 @@
+This is an example MOTD.
+Multiple lines are allowed.
